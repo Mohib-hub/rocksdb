@@ -48,6 +48,7 @@
 #include <vector>
 
 #include "env/composite_env_wrapper.h"
+#include "env/fs_zenfs.h"
 #include "env/io_posix.h"
 #include "logging/logging.h"
 #include "logging/posix_logger.h"
@@ -1056,6 +1057,23 @@ static FactoryFunc<FileSystem> posix_filesystem_reg =
           f->reset(new PosixFileSystem());
           return f->get();
         });
-#endif
 
+static FactoryFunc<FileSystem> zenfs_filesystem_reg =
+    ObjectLibrary::Default()->Register<FileSystem>(
+        "zenfs://.*",
+        [](const std::string& uri, std::unique_ptr<FileSystem>* f,
+           std::string* errmsg) {
+          std::string bdevname = uri;
+ 	  FileSystem *fs = nullptr;
+	  Status s;
+
+          bdevname.replace(0, strlen("zenfs://"), "");
+	  s = NewZenFS(&fs, bdevname);
+	  if (!s.ok()) {
+	    *errmsg = s.ToString();
+	  }
+          f->reset(fs);
+          return f->get();
+        });
+#endif
 }  // namespace ROCKSDB_NAMESPACE
